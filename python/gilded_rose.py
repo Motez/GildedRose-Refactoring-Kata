@@ -1,39 +1,14 @@
 # -*- coding: utf-8 -*-
 
-class GildedRose(object):
 
+class GildedRose(object):
     def __init__(self, items):
         self.items = items
+        self.item_updater_factory = ItemUpdaterFactory()
 
     def update_quality(self):
         for item in self.items:
-            if item.name != "Aged Brie" and item.name != "Backstage passes to a TAFKAL80ETC concert":
-                if item.quality > 0:
-                    if item.name != "Sulfuras, Hand of Ragnaros":
-                        item.quality = item.quality - 1
-            else:
-                if item.quality < 50:
-                    item.quality = item.quality + 1
-                    if item.name == "Backstage passes to a TAFKAL80ETC concert":
-                        if item.sell_in < 11:
-                            if item.quality < 50:
-                                item.quality = item.quality + 1
-                        if item.sell_in < 6:
-                            if item.quality < 50:
-                                item.quality = item.quality + 1
-            if item.name != "Sulfuras, Hand of Ragnaros":
-                item.sell_in = item.sell_in - 1
-            if item.sell_in < 0:
-                if item.name != "Aged Brie":
-                    if item.name != "Backstage passes to a TAFKAL80ETC concert":
-                        if item.quality > 0:
-                            if item.name != "Sulfuras, Hand of Ragnaros":
-                                item.quality = item.quality - 1
-                    else:
-                        item.quality = item.quality - item.quality
-                else:
-                    if item.quality < 50:
-                        item.quality = item.quality + 1
+            self.item_updater_factory.create(item).update_quality()
 
 
 class Item:
@@ -44,3 +19,61 @@ class Item:
 
     def __repr__(self):
         return "%s, %s, %s" % (self.name, self.sell_in, self.quality)
+
+
+class ItemUpdater:
+    def __init__(self, item):
+        self.item = item
+
+    def update_quality(self):
+        raise NotImplementedError
+
+    def decrease_quality(self, amount=1):
+        self.item.quality = max(0, self.item.quality - amount)
+
+    def increase_quality(self, amount=1):
+        self.item.quality = min(50, self.item.quality + amount)
+
+
+class NormalItem(ItemUpdater):
+    def update_quality(self):
+        self.decrease_quality()
+        self.item.sell_in -= 1
+        if self.item.sell_in < 0:
+            self.decrease_quality()
+
+
+class AgedBrie(ItemUpdater):
+    def update_quality(self):
+        self.increase_quality()
+        self.item.sell_in -= 1
+        if self.item.sell_in < 0:
+            self.increase_quality()
+
+
+class Sulfuras(ItemUpdater):
+    def update_quality(self):
+        pass
+
+
+class BackstagePass(ItemUpdater):
+    def update_quality(self):
+        self.increase_quality()
+        if self.item.sell_in < 11:
+            self.increase_quality()
+        if self.item.sell_in < 6:
+            self.increase_quality()
+        self.item.sell_in -= 1
+        if self.item.sell_in < 0:
+            self.item.quality = 0
+
+
+class ItemUpdaterFactory:
+    def create(self, item):
+        if item.name == "Aged Brie":
+            return AgedBrie(item)
+        if item.name == "Sulfuras, Hand of Ragnaros":
+            return Sulfuras(item)
+        if item.name == "Backstage passes to a TAFKAL80ETC concert":
+            return BackstagePass(item)
+        return NormalItem(item)
