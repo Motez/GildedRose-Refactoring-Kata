@@ -68,6 +68,14 @@ class BackstagePass(ItemUpdater):
             self.item.quality = 0
 
 
+class ConjuredItem(ItemUpdater):
+    def update_quality(self):
+        self.decrease_quality(2)
+        self.item.sell_in -= 1
+        if self.item.sell_in < 0:
+            self.decrease_quality(2)
+
+
 class ItemUpdaterFactory:
     def create(self, item):
         if item.name == "Aged Brie":
@@ -76,4 +84,6 @@ class ItemUpdaterFactory:
             return Sulfuras(item)
         if item.name == "Backstage passes to a TAFKAL80ETC concert":
             return BackstagePass(item)
+        if item.name.startswith("Conjured"):
+            return ConjuredItem(item)
         return NormalItem(item)
